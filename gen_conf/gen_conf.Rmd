@@ -1,0 +1,66 @@
+---
+title: "gen_conf"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### Part 1:
+H0: Priesthood Session talks and General Relief Society talks have the same words on average.
+Ha: Priesthood Session talks have more words on average than General Relief Society talks.
+
+### Part 2: Read in the data
+```{r}
+conf <- read.csv("general-conference.csv")
+```
+
+### Part 3: Subset your data into the groups necessary for your hypothesis test (10 points)
+```{r}
+priesthood <- conf[conf$session == "Priesthood Session",]
+rs <- conf[conf$session == "General Relief Society Meeting",]
+```
+
+### Part 4: Conduct a bootstrap procedure to test your hypothesis (25 points):
+```{r}
+# Calculate the observed difference in median word count between your two groups (5 points)
+obs_diff <- mean(priesthood$words) - mean(rs$words)
+
+# Calculate 10,000 bootstrapped differences (10 points)
+n_reps <- 10000
+bs_results <- replicate(n_reps, {
+priesthood_bs <- sample(priesthood$words, replace = TRUE)
+rs_bs <- sample(rs$words, replace = TRUE)
+mean(priesthood_bs) - mean(rs_bs)
+})
+
+# Based on your results from the above 10,000 samples, calculate a 95% confidence interval on your observed difference (10 points)
+(ci_bs <- quantile(bs_results, c(0.025,0.975)))
+```
+
+### Part 5: Conduct a permutation test to test your hypothesis (25 points):
+```{r}
+# Calculate the observed difference in median word count between your two groups (5 points)
+observed_difference <- median(priesthood$words) - median(rs$words)
+
+# Perform a permutation test with 10,000 samples (10 points)
+n_reps <- 10000
+results_perm <- replicate(n_reps, {
+  all_words <- c(priesthood$words, rs$words)
+perm_sample <- sample(all_words)
+median(perm_sample[1:length(priesthood$words)]) - mean(perm_sample[1:length(rs$words)])
+})
+
+# Calculate the p value for your observed difference along with its 95% confidence interval (10 points)
+p_val <- mean(results_perm >= observed_difference)
+ci_perm <- p_val + c(-1, 1) * qnorm(0.975) * sqrt(p_val * (1 - p_val) / n_reps)
+
+c("lower" = ci_perm[1],
+  p_value = p_val,
+  "upper" = ci_perm[2])
+```
+
+### Part 6: Interpret your conclusions from both procedures (5 points)
+The resulting confidence interval that I calculated from the bootstrapping procedure contained 0, which means I fail to reject the null hypothesis that the mean words for Priesthood talks is equal to the mean words for Relief Society talks.
+
+The p-value and its confidence interval that I calculated from the permutation procedure was less than 0.05, which means I can reject the null hypothesis and conclude that mean words for Priesthood talks is greater than mean words for Relief Society talks.

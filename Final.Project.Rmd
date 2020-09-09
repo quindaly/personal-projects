@@ -1,0 +1,154 @@
+---
+title: "Final.Project"
+author: "Quin Daly"
+date: "2/23/2019"
+output: word_document
+---
+```{r, echo=FALSE}
+library(dplyr)
+library(tibble)
+library(ggplot2)
+library('scales')
+library(knitr)
+```
+
+Read in data
+```{r, echo=FALSE}
+Form_A <- read.csv("/Users/quindaly/Downloads/Data.and.Domains/FormA.csv", header = FALSE, stringsAsFactors = FALSE)
+colnames(Form_A) <- c("AAAAKey", seq(from = 1, to = 150, by = 1))
+Form_A_Domain <- read.csv("/Users/quindaly/Downloads/Data.and.Domains/Domains FormA.csv", header = TRUE, stringsAsFactors = FALSE)
+Form_B <- read.csv("/Users/quindaly/Downloads/Data.and.Domains/FormB.csv", header = FALSE, stringsAsFactors = FALSE)
+colnames(Form_B) <- c("BBBBKey", seq(from = 1, to = 150, by = 1))
+Form_B_Domain <- read.csv("/Users/quindaly/Downloads/Data.and.Domains/Domains FormB.csv", header = TRUE, stringsAsFactors = FALSE)
+```
+
+Student scores dataframe
+```{r, echo=FALSE}
+# Form_A Scores #
+Form_A_Results <- matrix(nrow = 50, ncol = 150)
+for(s in 2:51){
+  for(i in 2:151){
+    Form_A_Results[s-1, i-1] <- as.numeric(Form_A[s, i] == Form_A[1, i])
+  }
+}
+Student_Scores_A <- as.data.frame(apply(Form_A_Results, 1, sum))
+
+Student_Scores_A <- Student_Scores_A %>%
+  mutate(Percent = Student_Scores_A$`apply(Form_A_Results, 1, sum)` / 150)
+Student_Scores_A$Percent <- percent(Student_Scores_A$Percent,digits=1)
+
+# Form_B Scores #
+Form_B_Results <- matrix(nrow = 49, ncol = 150)
+for(s in 2:50){
+  for(i in 2:151){
+    Form_B_Results[s-1, i-1] <- as.numeric(Form_B[s, i] == Form_B[1, i])
+  }
+}
+Student_Scores_B <- as.data.frame(apply(Form_B_Results, 1, sum))
+
+Student_Scores_B <- Student_Scores_B %>%
+  mutate(Percent = Student_Scores_B$`apply(Form_B_Results, 1, sum)` / 150)
+Student_Scores_B$Percent <- percent(Student_Scores_B$Percent,digits=1)
+```
+
+Domains:
+```{r, echo=FALSE}
+# Transposing domain column to row in 'results' data.frame #
+tDomainA <- t(Form_A_Domain$Domain..)
+Form_A_Results_Domain <- rbind(tDomainA,Form_A_Results)
+tDomainB <- t(Form_B_Domain$Domain..)
+Form_B_Results_Domain <- rbind(tDomainB, Form_B_Results)
+
+Domain_Score_A <- numeric()
+Domain_Score_B <- numeric()
+Domain_Percent_A <- numeric()
+Domain_Percent_B <- numeric()
+
+
+for(i in 1:5) {
+  Domain_Score_A <- cbind(Domain_Score_A, apply(Form_A_Results_Domain[-1, (Form_A_Results_Domain[1,] == i)], 1, sum))
+  Domain_Score_B <- cbind(Domain_Score_B, apply(Form_B_Results_Domain[-1, (Form_B_Results_Domain[1,] == i)], 1, sum))
+  Domain_Percent_A <- cbind(Domain_Percent_A, apply(Form_A_Results_Domain[-1, (Form_A_Results_Domain[1,] == i)], 1, mean))
+  Domain_Percent_B <- cbind(Domain_Percent_B, apply(Form_B_Results_Domain[-1, (Form_B_Results_Domain[1,] == i)], 1, mean))
+}
+
+
+```
+
+Making Full Form:
+```{r, echo=FALSE}
+Report_A <- data.frame(Form_A[c(2:51),1], "A", Student_Scores_A, Domain_Score_A, Domain_Percent_A)
+Report_B <- data.frame(Form_B[c(2:50),1], "B", Student_Scores_B, Domain_Score_B, Domain_Percent_B)
+
+colnames(Report_A) <- c("Student ID", "Form", "Total Score", "Percent", "D1 Score", "D2 Score", "D3 Score", "D4 Score", "D5 Score", "D1 Percent", "D2 Percent", "D3 Percent", "D4 Percent", "D5 Percent")
+colnames(Report_B) <- c("Student ID", "Form", "Total Score", "Percent", "D1 Score", "D2 Score", "D3 Score", "D4 Score", "D5 Score", "D1 Percent", "D2 Percent", "D3 Percent", "D4 Percent", "D5 Percent")
+
+Full_Form <- rbind(Report_A, Report_B)
+
+Full_Form$`D1 Percent` <- percent(Full_Form$`D1 Percent`,digits=1)
+Full_Form$`D2 Percent` <- percent(Full_Form$`D2 Percent`,digits=1)
+Full_Form$`D3 Percent` <- percent(Full_Form$`D3 Percent`,digits=1)
+Full_Form$`D4 Percent` <- percent(Full_Form$`D4 Percent`,digits=1)
+Full_Form$`D5 Percent` <- percent(Full_Form$`D5 Percent`,digits=1)
+```
+
+Report 1 and 2:
+```{r, echo=FALSE}
+# Report 1: Sort by ID #
+Full_Form$`Student ID` <- as.character(Full_Form$`Student ID`)
+Full_Form$`Student ID` <- as.numeric(Full_Form$`Student ID`)
+Report_1 <- Full_Form %>%
+  arrange(`Student ID`)
+
+# Report 2: Sort by Percentage #
+Report_2 <- Full_Form %>%
+  arrange(desc(`Percent`))
+```
+
+Boxplots:
+```{r, echo=FALSE}
+library(dplyr)
+Form_A_Domain %>% group_by(Domain..) %>% tally()
+Form_B_Domain %>% group_by(Domain..) %>% tally()
+
+# Convert domain scores back to percents #
+domain1percent <- (Full_Form[,5]/30)*100
+domain2percent <- (Full_Form[,6]/35)*100
+domain3percent <- (Full_Form[,7]/30)*100
+domain4percent <- (Full_Form[,8]/30)*100
+domain5percent <- (Full_Form[,9]/25)*100
+boxplot(domain1percent, domain2percent, domain3percent, domain4percent, domain5percent, main = "Domains Boxplot", xlab = "Domain Number", ylab = "Percentage", names = 1:5)
+
+```
+
+Reports 3 and 4
+```{r, echo=FALSE}
+Question_A_Report <- data.frame("A", c(1:150), apply(Form_A_Results, 2, sum)/50)
+Question_B_Report <- data.frame("B", c(1:150), apply(Form_B_Results, 2, sum)/49)
+
+colnames(Question_A_Report) <- c("Form", "Question", "Percent")
+colnames(Question_B_Report) <- c("Form", "Question", "Percent")
+
+Questions_Full <- rbind(Question_A_Report, Question_B_Report)
+
+# Report 3: Sort by Form #
+Report_3 <- Questions_Full %>% 
+  arrange(Form)
+
+# Report 4: Sort by Percent #
+Report_4 <- Questions_Full %>% 
+  arrange(desc(Percent))
+
+# Change Percent variable to percent form #
+Report_3$Percent <- percent(Report_3$Percent, digits=1)
+Report_4$Percent <- percent(Report_4$Percent, digits=1)
+```
+
+Kable:
+```{r, echo=FALSE}
+kable(Report_1, format = "markdown", caption = "Section A: Students sorted by ID", row.names = FALSE, split.table = Inf, align = 'c')
+kable(Report_2, format = "markdown", caption = "Section A: Students sorted by Percent", row.names = FALSE, split.table = Inf, align = 'c')
+kable(Report_3, format = "markdown", caption = "Section B: Questions sorted by Number", row.names = FALSE, split.table = Inf, align = 'c')
+kable(Report_4, format = "markdown", caption = "Section B: Questions sorted by Percent", row.names = FALSE, split.table = Inf, align = 'c')
+```
+
